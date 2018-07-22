@@ -217,6 +217,12 @@ impl<'a> Deref for CompleteByteSlice<'a> {
   }
 }
 
+impl<'a> AsRef<[u8]> for CompleteByteSlice<'a> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl<'a> AtEof for CompleteByteSlice<'a> {
   fn at_eof(&self) -> bool {
     true

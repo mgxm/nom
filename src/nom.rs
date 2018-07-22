@@ -428,13 +428,17 @@ pub fn be_u24(i: &[u8]) -> IResult<&[u8], u32> {
 
 /// Recognizes big endian unsigned 4 bytes integer
 #[inline]
-pub fn be_u32(i: &[u8]) -> IResult<&[u8], u32> {
-  if i.len() < 4 {
-    need_more(i, Needed::Size(4))
-  } else {
-    let res = ((i[0] as u32) << 24) + ((i[1] as u32) << 16) + ((i[2] as u32) << 8) + i[3] as u32;
-    Ok((&i[4..], res))
-  }
+pub fn be_u32<T>(i: T) -> IResult<T, u32>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
+    if i.as_ref().len() < 4 {
+        need_more(i, Needed::Size(4))
+    } else {
+        let res = ((i.as_ref()[0] as u32) << 24) + ((i.as_ref()[1] as u32) << 16) + ((i.as_ref()[2] as u32) << 8) + i.as_ref()[3] as u32;
+        Ok((i.slice(4..), res))
+    }
 }
 
 /// Recognizes big endian unsigned 8 bytes integer
@@ -1211,7 +1215,7 @@ mod tests {
     assert_eq!(
       le_i64(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]),
       Ok((&b""[..], 0))
-    );
+   );
     assert_eq!(
       le_i64(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]),
       Ok((&b""[..], 9_223_372_036_854_775_807_i64))
@@ -1267,6 +1271,14 @@ mod tests {
       Ok((&b""[..], 185_728_392_f64))
     );
   }
+
+    #[test]
+    fn be_u32_complete_byte_slice_tests_() {
+        let input = CompleteByteSlice(&[0x00, 0x00, 0x00, 0x2E]);
+        assert_eq!((CompleteByteSlice(&b""[..]), 46), be_u32(input).unwrap());
+        let input = [0x00, 0x00, 0x00, 0x2E];
+        assert_eq!((&b""[..], 46), be_u32(&input[..]).unwrap());
+    }
 
   #[test]
   fn hex_u32_tests() {
