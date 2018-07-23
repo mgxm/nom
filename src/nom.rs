@@ -396,33 +396,45 @@ pub fn sized_buffer(input: &[u8]) -> IResult<&[u8], &[u8]> {
 
 /// Recognizes an unsigned 1 byte integer (equivalent to take!(1)
 #[inline]
-pub fn be_u8(i: &[u8]) -> IResult<&[u8], u8> {
-  if i.len() < 1 {
+pub fn be_u8<T>(i: T) -> IResult<T, u8>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
+  if i.as_ref().len() < 1 {
     need_more(i, Needed::Size(1))
   } else {
-    Ok((&i[1..], i[0]))
+    Ok((i.slice(1..), i.as_ref()[0]))
   }
 }
 
 /// Recognizes big endian unsigned 2 bytes integer
 #[inline]
-pub fn be_u16(i: &[u8]) -> IResult<&[u8], u16> {
-  if i.len() < 2 {
+pub fn be_u16<T>(i: T) -> IResult<T, u16>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
+  if i.as_ref().len() < 2 {
     need_more(i, Needed::Size(2))
   } else {
-    let res = ((i[0] as u16) << 8) + i[1] as u16;
-    Ok((&i[2..], res))
+    let res = ((i.as_ref()[0] as u16) << 8) + i.as_ref()[1] as u16;
+    Ok((i.slice(2..), res))
   }
 }
 
 /// Recognizes big endian unsigned 3 byte integer
 #[inline]
-pub fn be_u24(i: &[u8]) -> IResult<&[u8], u32> {
-  if i.len() < 3 {
+pub fn be_u24<T>(i: T) -> IResult<T, u32>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
+  if i.as_ref().len() < 3 {
     need_more(i, Needed::Size(3))
   } else {
-    let res = ((i[0] as u32) << 16) + ((i[1] as u32) << 8) + (i[2] as u32);
-    Ok((&i[3..], res))
+    let res = ((i.as_ref()[0] as u32) << 16) + ((i.as_ref()[1] as u32) << 8) + (i.as_ref()[2] as u32);
+    Ok((i.slice(3..), res))
   }
 }
 
@@ -443,19 +455,27 @@ where
 
 /// Recognizes big endian unsigned 8 bytes integer
 #[inline]
-pub fn be_u64(i: &[u8]) -> IResult<&[u8], u64, u32> {
-  if i.len() < 8 {
+pub fn be_u64<T>(i: T) -> IResult<T, u64, u32>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
+  if i.as_ref().len() < 8 {
     need_more(i, Needed::Size(8))
   } else {
-    let res = ((i[0] as u64) << 56) + ((i[1] as u64) << 48) + ((i[2] as u64) << 40) + ((i[3] as u64) << 32) + ((i[4] as u64) << 24)
-      + ((i[5] as u64) << 16) + ((i[6] as u64) << 8) + i[7] as u64;
-    Ok((&i[8..], res))
+    let res = ((i.as_ref()[0] as u64) << 56) + ((i.as_ref()[1] as u64) << 48) + ((i.as_ref()[2] as u64) << 40) + ((i.as_ref()[3] as u64) << 32) + ((i.as_ref()[4] as u64) << 24)
+          + ((i.as_ref()[5] as u64) << 16) + ((i.as_ref()[6] as u64) << 8) + i.as_ref()[7] as u64;
+    Ok((i.slice(8..), res))
   }
 }
 
 /// Recognizes a signed 1 byte integer (equivalent to take!(1)
 #[inline]
-pub fn be_i8(i: &[u8]) -> IResult<&[u8], i8> {
+pub fn be_i8<T>(i: T) -> IResult<T, i8>
+where
+    T: AsRef<[u8]> + AtEof + Sized,
+    T: Slice<RangeFrom<usize>>,
+{
   map!(i, be_u8, |x| x as i8)
 }
 
@@ -1104,10 +1124,10 @@ mod tests {
 
   #[test]
   fn i8_tests() {
-    assert_eq!(be_i8(&[0x00]), Ok((&b""[..], 0)));
-    assert_eq!(be_i8(&[0x7f]), Ok((&b""[..], 127)));
-    assert_eq!(be_i8(&[0xff]), Ok((&b""[..], -1)));
-    assert_eq!(be_i8(&[0x80]), Ok((&b""[..], -128)));
+    assert_eq!(be_i8(&[0x00][..]), Ok((&b""[..], 0)));
+    assert_eq!(be_i8(&[0x7f][..]), Ok((&b""[..], 127)));
+    assert_eq!(be_i8(&[0xff][..]), Ok((&b""[..], -1)));
+    assert_eq!(be_i8(&[0x80][..]), Ok((&b""[..], -128)));
   }
 
   #[test]
@@ -1120,9 +1140,9 @@ mod tests {
 
   #[test]
   fn u24_tests() {
-    assert_eq!(be_u24(&[0x00, 0x00, 0x00]), Ok((&b""[..], 0)));
-    assert_eq!(be_u24(&[0x00, 0xFF, 0xFF]), Ok((&b""[..], 65_535_u32)));
-    assert_eq!(be_u24(&[0x12, 0x34, 0x56]), Ok((&b""[..], 1_193_046_u32)));
+    assert_eq!(be_u24(&[0x00, 0x00, 0x00][..]), Ok((&b""[..], 0)));
+    assert_eq!(be_u24(&[0x00, 0xFF, 0xFF][..]), Ok((&b""[..], 65_535_u32)));
+    assert_eq!(be_u24(&[0x12, 0x34, 0x56][..]), Ok((&b""[..], 1_193_046_u32)));
   }
 
   #[test]
@@ -1390,9 +1410,9 @@ mod tests {
   fn manual_configurable_endianness_test() {
     let x = 1;
     let int_parse: Box<Fn(&[u8]) -> IResult<&[u8], u16>> = if x == 2 {
-      Box::new(be_u16)
+      Box::new(|v| be_u16(v))
     } else {
-      Box::new(le_u16)
+      Box::new(|v| le_u16(v))
     };
     println!("{:?}", int_parse(&b"3"[..]));
     assert_eq!(int_parse(&[0x80, 0x00]), Ok((&b""[..], 128_u16)));
